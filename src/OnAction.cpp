@@ -104,6 +104,8 @@ void CSettingsReader::Control(const char *Path, const char *dPath, wxGauge *gaug
 				CFieldStatements::FieldCollation(TableDef, tabledefinfo, CollateIndexFields, settings.m_bTrimTextValues);
 		}
 	}
+
+
 	for( int i = 0; i < nTableCount; ++i )
 	{
 		CDaoTableDefInfo tabledefinfo;                           
@@ -115,8 +117,10 @@ void CSettingsReader::Control(const char *Path, const char *dPath, wxGauge *gaug
 					short nRelationCount = db.GetRelationCount();
 					CRelationships::Relationhips(db, RelationFields, nRelationCount); 
 				}
+
 				CDaoTableDef TableDef(&db);
 				sStatement = _T("CREATE TABLE `");  
+
 				if( settings.m_bKeyWordList && PrgDlg != NULL)
 				{
 					for( int i1 = 0; i1 < 124; ++i1 )
@@ -127,6 +131,7 @@ void CSettingsReader::Control(const char *Path, const char *dPath, wxGauge *gaug
 							wxString ErrorMessage = wxT("WARNING: table name found as sqlite keyword this could lead to unexpected behaviour, table name found: ");
 							PrgDlg->SetDefaultStyle(wxTextAttr (wxNullColour, *wxYELLOW));
 							CT2CA pszConvertedAnsiString (tabledefinfo.m_strName);
+
 							std::string strStd (pszConvertedAnsiString);
 							ErrorMessage += wxString::FromUTF8(_strdup(strStd.c_str() ) );
 							ErrorMessage += wxT("\n");
@@ -151,12 +156,27 @@ void CSettingsReader::Control(const char *Path, const char *dPath, wxGauge *gaug
 												 IndexTable, index);
 				}
 				++index;
-				if(PrgDlg != NULL)
-					CFieldStatements::fFields(db, TableDef, tabledefinfo, InsertStatements, UniqueFields, settings, sStatement, ReservedKeyWords, TableField, IndexInfo, nWarningCount, PrgDlg); 
-				else CFieldStatements::fFields(db, TableDef, tabledefinfo, InsertStatements, UniqueFields, settings, sStatement, ReservedKeyWords, TableField, IndexInfo, nWarningCount);
+
+				if (PrgDlg != NULL)
+				{
+					CFieldStatements::fFields(db, TableDef, tabledefinfo, InsertStatements, UniqueFields, settings, sStatement, ReservedKeyWords, TableField, IndexInfo, nWarningCount, PrgDlg);
+				}
+				else {
+					CFieldStatements::fFields(db, TableDef, tabledefinfo, InsertStatements, UniqueFields, settings, sStatement, ReservedKeyWords, TableField, IndexInfo, nWarningCount);
+				}
+
 				statements.push_back(sStatement);
 		} 
 	} 
+
+
+
+
+
+
+
+
+
 if( settings.m_bForeignkeySupport )
 	{
 		unsigned nRelationCount = db.GetRelationCount();

@@ -46,18 +46,25 @@ CString CFieldStatements::GetDaoFieldDescription(CString &strFieldName, CString 
         } 
         return strT; 
     } 
-bool CFieldStatements::GetPrimaryKey(CString &sTableName, CString &sFieldName,std::vector<CString> &indexinfo)
+
+//todo add support for multiple primary keys
+bool CFieldStatements::GetPrimaryKey(CString &sTableName, CString &sFieldName, std::vector<CString> &indexinfo)
 {
 	    CString temp = sTableName;
+		
 		temp += sFieldName;
+		
 		auto end_it = indexinfo.end();
+
 		for(auto it = indexinfo.begin(); it != end_it; ++it)
 		{
+			//field is in the index list
 			if( !(temp.Compare(*it)) )
 				return true;
 		}
 		return false;
 }
+
 wxString CFieldStatements::CstringToWxString(const CString &ConversionString)
 {
 	CT2CA pszConvertedAnsiString (ConversionString);
@@ -72,18 +79,43 @@ void CFieldStatements::fFields(CDaoDatabase &db, CDaoTableDef &TableDef, CDaoTab
 		CString *sFieldnames = new CString[nFieldCount];  
 		bool bIsText;
 		CString Temp2;
-		for( int i1 = 0; i1 < nFieldCount; ++i1 )
+
+
+		//todo scan all fields to see if primary key
+		int primaryKeyCount = 0;
+		for (int i1 = 0; i1 < nFieldCount; ++i1)
+		{
+			bIsText = false;
+			CDaoFieldInfo fieldinfo;
+			TableDef.GetFieldInfo(i1, fieldinfo, AFX_DAO_ALL_INFO);
+
+			bool isPrimary = CFieldStatements::GetPrimaryKey(tabledefinfo.m_strName, fieldinfo.m_strName, IndexInfo);
+
+			if (isPrimary)
 			{
+				primaryKeyCount++;
+			}
+
+		}
+
+
+		for( int i1 = 0; i1 < nFieldCount; ++i1 )
+		{
 				bIsText = false;
 				CDaoFieldInfo fieldinfo;                                          
 				TableDef.GetFieldInfo(i1,fieldinfo,AFX_DAO_ALL_INFO);
+				
 				bool isPrimary = CFieldStatements::GetPrimaryKey(tabledefinfo.m_strName,fieldinfo.m_strName,IndexInfo);
+
+
+				//why only not primary
 				if( !isPrimary ) 
 				{
 					CString Temp = tabledefinfo.m_strName;
 					Temp += fieldinfo.m_strName;
 					TableField.push_back(Temp);
 				}
+
 				if( settings.m_bTrimTextValues ) 
 					sFieldnames[i1] = fieldinfo.m_strName.TrimRight().TrimLeft(); 
 				else 
@@ -117,25 +149,44 @@ void CFieldStatements::fFields(CDaoDatabase &db, CDaoTableDef &TableDef, CDaoTab
 				CDaoFieldInfo recordinfo;
 				rc.GetFieldInfo(i1,recordinfo);
 				FieldTypeAdd(TableDef, recordinfo, bIsText, sStatement);
+
+
 				if( settings.m_bNotNullAdd )  
 					NotNullAdd(fieldinfo, sStatement);
+				
 				if( settings.m_bDefaultValueAdd ) 
 				{
 					if( PrgDlg != NULL )
 						DefaultValueAdd(fieldinfo, tabledefinfo, sStatement, recordinfo, nWarningCount, PrgDlg);
 					else DefaultValueAdd(fieldinfo, tabledefinfo, sStatement, recordinfo, nWarningCount);
 				}
-				if( settings.m_bAutoIncrementAdd )
-					AutoIncrementAdd(fieldinfo, sStatement);
-				if( (!settings.m_bAutoIncrementAdd && isPrimary && settings.m_PrimaryKeySupport) || (isPrimary && settings.m_PrimaryKeySupport && !(fieldinfo.m_lAttributes & dbAutoIncrField)) )
-					sStatement += _T(" PRIMARY KEY");
-				if( settings.m_bUniqueFieldAdd ) 
-					UniqueFieldAdd(fieldinfo, tabledefinfo, UniqueFields, sStatement);
+
+				if (primaryKeyCount <= 1)
+				{
+
+					if (settings.m_bAutoIncrementAdd)
+						AutoIncrementAdd(fieldinfo, sStatement);
+
+					//if not auto increment, and is primary key
+					if ((!settings.m_bAutoIncrementAdd && isPrimary && settings.m_PrimaryKeySupport) || (isPrimary && settings.m_PrimaryKeySupport && !(fieldinfo.m_lAttributes & dbAutoIncrField)))
+						sStatement += _T(" PRIMARY KEY");
+
+				}
+
+
+				if ((primaryKeyCount <= 1 && isPrimary) || (primaryKeyCount > 1 && !isPrimary))
+				{
+					if (settings.m_bUniqueFieldAdd)
+						UniqueFieldAdd(fieldinfo, tabledefinfo, UniqueFields, sStatement);
+				}
+
+
 				if( bIsText && settings.m_bCollateNoCaseFieldsAdd )
 					sStatement += _T(" COLLATE NOCASE");
 				 if( settings.m_bAddComments )
 				{
 					Temp2 = GetDaoFieldDescription(fieldinfo.m_strName, tabledefinfo.m_strName, db);
+
 					if( !Temp2.IsEmpty() )
 					{
 						sStatement += _T(" /*");
@@ -143,14 +194,41 @@ void CFieldStatements::fFields(CDaoDatabase &db, CDaoTableDef &TableDef, CDaoTab
 						sStatement += _T(" */");
 					}
 				}
-				if( i1 != nFieldCount-1 )
-					sStatement += (_T(","));
-			    else
-					sStatement+= (_T(");"));
+				 if (i1 != nFieldCount - 1)
+				 {
+					 sStatement += (_T(","));
+				 }
+				 else
+				 {
+
+
+					 if (primaryKeyCount > 1)
+					 {
+
+						 CString multiKey = _T("PRIMARY KEY(");
+						 //multiKey += _T("PRIMARY KEY(");
+
+
+						 for (unsigned i1 = 0; i1 < primaryKeyCount; ++i1)
+						 {
+							 multiKey += IndexInfo[i1];
+							 if (i1 != primaryKeyCount - 1)
+								 multiKey += _T(",");
+							 else multiKey += ")";
+						 }
+
+						 sStatement += multiKey;
+					 }
+
+					 sStatement += (_T(");"));
+				 }
 					
-			}
-		if( settings.m_bRecordAdd ) 
+		}
+
+		if (settings.m_bRecordAdd)
+		{
 			Records(TableDef, tabledefinfo, nFieldCount, sFieldnames, InsertStatements);
+		}
 }
 void CFieldStatements::NotNullAdd(const CDaoFieldInfo &fieldinfo,CString &sStatement)
 {
@@ -305,6 +383,7 @@ void CFieldStatements::UniqueFieldAdd(const CDaoFieldInfo &fieldinfo, const CDao
 	CString temp = tabledefinfo.m_strName;
 	temp += fieldinfo.m_strName;
 	auto end_it = UniqueFields.end();
+
 	for( auto i2 = UniqueFields.begin(); i2 != end_it; ++i2 )
 	{
 		if( !(temp.Compare(*i2)) )

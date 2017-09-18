@@ -36,6 +36,15 @@ bool MyApp::OnInit()
 	int nPosX, nPosY, nSizeX;
 	file_utils::GetWindowInformation(nPosX, nPosY, nSizeX);
 
+
+	if (wxGetApp().argc == 3)
+	{
+		//wxGetApp().argv[1];
+		//wxGetApp().argv[1];
+	}
+    
+
+
 	CMainDlg *pDlg = new CMainDlg(wxT("mdb2SQLite"), nPosX, nPosY, nSizeX);
     pDlg->ShowModal();
 	pDlg->Destroy();

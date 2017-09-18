@@ -21,6 +21,8 @@ void CIndexStatements::Indexes(CDaoTableDef &TableDef, std::vector<CString> &Ind
 	short nIndexCount = TableDef.GetIndexCount();
 	sTableNames2[index] = tabledefinfo.m_strName;
 	IndexTable[index] = nIndexCount;
+
+	//for each index in the table
 	for( int i1 = 0; i1 < nIndexCount; ++i1 )
 		{
 			CDaoIndexInfo indexinfo;
@@ -30,16 +32,37 @@ void CIndexStatements::Indexes(CDaoTableDef &TableDef, std::vector<CString> &Ind
 				--IndexTable[index];
 				continue;
 			}
+
+			//ry todo, marked as primary key
 			if( indexinfo.m_bPrimary )
 			{
-				CString temp = tabledefinfo.m_strName;
-				temp += indexinfo.m_pFieldInfos[0].m_strName;
-				IndexInfo.push_back(temp);
+
+				if (indexinfo.m_nFields == 1)
+				{
+					CString temp = tabledefinfo.m_strName;
+					temp += indexinfo.m_pFieldInfos[0].m_strName;
+					IndexInfo.push_back(temp);
+				}
+				//more than one primary key
+				else
+				{
+
+					for (short i = 0; i < indexinfo.m_nFields; ++i)
+					{
+						CString temp = tabledefinfo.m_strName;
+						temp += indexinfo.m_pFieldInfos[i].m_strName;
+						IndexInfo.push_back(temp);
+					}
+
+				}
 			}
+
+
 			if( indexinfo.m_bUnique == TRUE )
 				sStatement = _T("CREATE UNIQUE INDEX ");
 			else 
 				sStatement = _T("CREATE INDEX ");
+
 			if ( bKeyWordList && PrgDlg != NULL)
 			{
 				for( int i2 = 0; i2 < 124; ++i2 )
@@ -77,12 +100,15 @@ void CIndexStatements::Indexes(CDaoTableDef &TableDef, std::vector<CString> &Ind
 						sStatement2 += indexinfo.m_pFieldInfos[i2].m_strName.TrimLeft().TrimRight();
 					else 
 						sStatement2 += indexinfo.m_pFieldInfos[i2].m_strName;
+					
+					//ry todo figure this out
 					UniqueFields.push_back(sStatement2);
 				}
 				if( m_bTrimTextValues )
 					sParrent += indexinfo.m_pFieldInfos[i2].m_strName.TrimLeft().TrimRight();
 				else 
 					sParrent += indexinfo.m_pFieldInfos[i2].m_strName;
+
 				if( m_bTrimTextValues )
 					sStatement += indexinfo.m_pFieldInfos[i2].m_strName.TrimLeft().TrimRight();	
 				else 
