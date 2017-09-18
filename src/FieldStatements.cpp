@@ -81,6 +81,8 @@ void CFieldStatements::fFields(CDaoDatabase &db, CDaoTableDef &TableDef, CDaoTab
 		CString Temp2;
 
 
+		std::vector<CString> multiKeyVec;
+
 		//todo scan all fields to see if primary key
 		int primaryKeyCount = 0;
 		for (int i1 = 0; i1 < nFieldCount; ++i1)
@@ -94,10 +96,13 @@ void CFieldStatements::fFields(CDaoDatabase &db, CDaoTableDef &TableDef, CDaoTab
 			if (isPrimary)
 			{
 				primaryKeyCount++;
+				multiKeyVec.push_back(fieldinfo.m_strName);
 			}
 
 		}
 
+
+		
 
 		for( int i1 = 0; i1 < nFieldCount; ++i1 )
 		{
@@ -114,6 +119,10 @@ void CFieldStatements::fFields(CDaoDatabase &db, CDaoTableDef &TableDef, CDaoTab
 					CString Temp = tabledefinfo.m_strName;
 					Temp += fieldinfo.m_strName;
 					TableField.push_back(Temp);
+				}
+				else
+				{
+					
 				}
 
 				if( settings.m_bTrimTextValues ) 
@@ -205,14 +214,15 @@ void CFieldStatements::fFields(CDaoDatabase &db, CDaoTableDef &TableDef, CDaoTab
 					 if (primaryKeyCount > 1)
 					 {
 
-						 CString multiKey = _T("PRIMARY KEY(");
+						 CString multiKey = _T(",PRIMARY KEY(");
 						 //multiKey += _T("PRIMARY KEY(");
 
 
-						 for (unsigned i1 = 0; i1 < primaryKeyCount; ++i1)
+						 for (unsigned i2 = 0; i2 < primaryKeyCount; ++i2)
 						 {
-							 multiKey += IndexInfo[i1];
-							 if (i1 != primaryKeyCount - 1)
+							 multiKey += multiKeyVec[i2];
+
+							 if (i2 != primaryKeyCount - 1)
 								 multiKey += _T(",");
 							 else multiKey += ")";
 						 }
